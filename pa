@@ -1,0 +1,111 @@
+from flask import Flask, request, render_template_string
+from flasgger import Swagger
+import re
+import webbrowser
+import threading
+
+app = Flask(__name__)
+swagger = Swagger(app)
+
+# HTML Template for the home page
+HTML_TEMPLATE = '''
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Safe Share</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            padding: 20px;
+        }
+        .container {
+            max-width: 600px;
+            margin: auto;
+            background: white;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        input[type="text"] {
+            width: calc(100% - 22px);
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        button {
+            padding: 10px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #218838;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 10px;
+            background: #e7f3fe;
+            border-left: 6px solid #2196F3;
+        }
+        iframe {
+            width: 100%;
+            height: 315px;
+            border: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>إنشاء رابط آمن لمشاركة فيديو يوتيوب</h2>
+        <img src="https://f.top4top.io/p_31955d2l41.jpg" alt="وصف الصورة" style="width: 100%; border-radius: 5px; margin-bottom: 20px;">
+        <form action="/safe-share" method="post">
+            <input type="text" name="url" placeholder="أدخل رابط فيديو يوتيوب" required>
+            <button type="submit">احصل على الفيديو الآمن</button>
+        </form>
+        {% if safe_link %}
+            <div class="result">
+                <strong>مشاهدة الفيديو:</strong>
+                <a href="{{ safe_link }}" target="_blank">{{ safe_link }}</a>
+                <iframe src="{{ safe_link }}" allowfullscreen></iframe>
+            </div>
+        {% endif %}
+        {% if error %}
+            <div class="result" style="background: #f8d7da; border-left: 6px solid #f5c6cb;">
+                <strong>خطأ:</strong> {{ error }}
+            </div>
+        {% endif %}
+    </div>
+</body>
+</html>
+'''
+
+@app.route('/')
+def home():
+    return render_template_string(HTML_TEMPLATE)
+
+@app.route('/safe-share', methods=['POST'])
+def safe_share():
+    data = request.form
+    video_url = data.get('url')
+
+    if not video_url:
+        return render_template_string(HTML_TEMPLATE, error='لا يوجد رابط مقدم')
+
+    if not re.match(r'https?://(www\.)?youtube\.com/watch\?v=[\w-]+', video_url):
+        return render_template_string(HTML_TEMPLATE, error='رابط يوتيوب غير صالح')
+
+    safe_link = f"https://www.youtube.com/embed/{video_url.split('v=')[1]}"
+    return render_template_string(HTML_TEMPLATE, safe_link=safe_link)
+
+def open_browser():
+    webbrowser.open('http://127.0.0.1:5000/')
+
+if __name__ == '__main__':
+    threading.Timer(1, open_browser).start()  # فتح الصفحة بعد ثانية واحدة
+    app.run(debug=True, use_reloader=False)  # تعطيل reloader لمنع فتح الصفحة مرتين
